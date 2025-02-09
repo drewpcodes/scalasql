@@ -1,22 +1,15 @@
 package scalasql.dialects
 
 import scalasql.query.{AscDesc, GroupBy, Join, Nulls, OrderBy, SubqueryRef, Table}
-import scalasql.core.{
-  Aggregatable,
-  Context,
-  DbApi,
-  DialectTypeMappers,
-  Expr,
-  Queryable,
-  TypeMapper,
-  SqlStr
-}
+import scalasql.core.{Aggregatable, Context, DbApi, DialectTypeMappers, Expr, Queryable, SqlStr, TypeMapper}
 import scalasql.{Sc, operations}
 import scalasql.core.SqlStr.{Renderable, SqlStringSyntax}
 import scalasql.operations.{ConcatOps, MathOps, TrimOps}
 
 import java.time.{Instant, LocalDateTime, OffsetDateTime}
 import scalasql.core.LiveExprs
+
+import java.sql.{JDBCType, PreparedStatement, ResultSet}
 
 trait MsSqlDialect extends Dialect {
   protected def dialectCastParams = false
@@ -25,7 +18,29 @@ trait MsSqlDialect extends Dialect {
   class MsSqlIntType extends IntType { override def castTypeString = "INT" }
 
   override implicit def StringType: TypeMapper[String] = new MsSqlStringType
-  class MsSqlStringType extends StringType { override def castTypeString = "VARCHAR" }
+  class MsSqlStringType extends StringType {
+    private final val nvarcharType = JDBCType.NVARCHAR.getVendorTypeNumber()
+    private final val lnvarcharType = JDBCType.LONGNVARCHAR.getVendorTypeNumber()
+    private final val ncharType = JDBCType.NCHAR.getVendorTypeNumber()
+    override def jdbcType = JDBCType.LONGNVARCHAR
+    override def get(r: ResultSet, idx: Int) = r.getString(idx)
+    override def put(r: PreparedStatement, idx: Int, v: String) = {
+      // NB Relying on the parameter type and explicitly using the unicode
+      // variant when required ensures that any connections with
+      // sendStringParametersAsUnicode=false will behave as expected.
+      // Performance benefits (cited by MS) of choosing the correct variant are questionable.
+      // TODO: I think this can only work with a dedicated unicodestring type param
+//      val paramType = r.getParameterMetaData.getParameterType(idx)
+//      if (paramType == nvarcharType || paramType == lnvarcharType || paramType == ncharType)
+//        r.setNString(idx, v)
+//      else
+//        r.setString(idx, v)
+      // TODO: Related to above, this will not work if non-default connection params are used
+      r.setNString(idx, v)
+    }
+    // todo: needed? does it need (max)? do we need two string types or is this more ergonomic?
+    override def castTypeString = "NVARCHAR"
+  }
 
   override implicit def BooleanType: TypeMapper[Boolean] = new BooleanType
   class MsSqlBooleanType extends BooleanType { override def castTypeString = "BIT" }

@@ -18,14 +18,14 @@ DROP TABLE IF EXISTS invoice;
 
 CREATE TABLE buyer (
     id INT PRIMARY KEY IDENTITY(1, 1),
-    name VARCHAR(256),
+    name NVARCHAR(256),
     date_of_birth DATE
 );
 
 CREATE TABLE product (
     id INT PRIMARY KEY IDENTITY(1, 1),
-    kebab_case_name VARCHAR(256),
-    name VARCHAR(256),
+    kebab_case_name NVARCHAR(256),
+    name NVARCHAR(256),
     price DECIMAL(20, 2)
 );
 
@@ -63,7 +63,7 @@ CREATE TABLE data_types (
     my_instant DATETIMEOFFSET,
     my_var_binary VARBINARY,
     my_uuid UNIQUEIDENTIFIER,
-    my_enum VARCHAR(256)
+    my_enum NVARCHAR(256)
 --     my_offset_time TIME WITH TIME ZONE,
 
 );
@@ -85,7 +85,7 @@ CREATE TABLE nested(
 
 CREATE TABLE enclosing(
     bar_id INT,
-    my_string VARCHAR(256),
+    my_string NVARCHAR(256),
     foo_id INT,
     my_boolean BIT
 );
@@ -96,5 +96,5 @@ CREATE TABLE enclosing(
 -- CREATE TABLE otherschema.invoice(
 --     id PRIMARY KEY IDENTITY(1, 1),
 --     total DECIMAL(20, 2),
---     vendor_name VARCHAR(256)
+--     vendor_name NVARCHAR(256)
 -- );
