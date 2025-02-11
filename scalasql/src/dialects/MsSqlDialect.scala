@@ -1,6 +1,6 @@
 package scalasql.dialects
 
-import scalasql.query.{AscDesc, GroupBy, Join, Nulls, OrderBy, SubqueryRef, Table}
+import scalasql.query.{AscDesc, GroupBy, Join, Nulls, OrderBy, Select, SubqueryRef, Table}
 import scalasql.core.{Aggregatable, Context, DbApi, DialectTypeMappers, Expr, Queryable, SqlStr, TypeMapper}
 import scalasql.{Sc, operations}
 import scalasql.core.SqlStr.{Renderable, SqlStringSyntax}
@@ -185,6 +185,17 @@ object MsSqlDialect extends MsSqlDialect {
         dialect: scalasql.core.DialectTypeMappers
     ): scalasql.query.SimpleSelect[Q, R] = {
       new SimpleSelect(expr, exprPrefix, exprSuffix, preserveAll, from, joins, where, groupBy0)
+    }
+
+    override def isEmpty: Expr[Boolean] = Expr { implicit ctx => sql"IIF(NOT EXISTS $this, 1, 0)" }
+
+    override def nonEmpty: Expr[Boolean] = Expr { implicit ctx => sql"IIF(EXISTS $this, 1, 0)" }
+
+    override def contains(other: Q): Expr[Boolean] = Expr { implicit ctx =>
+      qr.walkExprs(other).map(e => sql"$e") match {
+        case Seq(single) => sql"($single IN $this)"
+        case multiple => throw new Exception(".contains not supported for tuple values, try .join instead")
+      }
     }
   }
 

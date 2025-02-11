@@ -478,6 +478,9 @@ trait SelectTests extends ScalaSqlSuite {
             .contains((b.id, LocalDate.parse("2010-02-03")))
         )
       },
+      // TODO: For T-SQL this needs to map to EXISTS rather than IN, however it needs to alter the select list and add a WHERE
+      // ex: from buyer buyer0 where exists (select 1 from shipping_info where buyer_id = buyer0.buyer_id ...
+      // throws exception for now
       sql = """
         SELECT buyer0.id AS id, buyer0.name AS name, buyer0.date_of_birth AS date_of_birth
         FROM buyer buyer0
@@ -502,7 +505,7 @@ trait SelectTests extends ScalaSqlSuite {
         Buyer.select
           .map(b => (b.name, ShippingInfo.select.filter(_.buyerId `=` b.id).map(_.id).nonEmpty))
       },
-      sql = """
+      sqls = Seq("""
         SELECT
           buyer0.name AS res_0,
           (EXISTS (SELECT
@@ -511,6 +514,15 @@ trait SelectTests extends ScalaSqlSuite {
             WHERE (shipping_info1.buyer_id = buyer0.id))) AS res_1
         FROM buyer buyer0
       """,
+      """
+        SELECT
+          buyer0.name AS res_0,
+          IIF(EXISTS (SELECT
+            shipping_info1.id AS res
+            FROM shipping_info shipping_info1
+            WHERE (shipping_info1.buyer_id = buyer0.id)), 1, 0) AS res_1
+        FROM buyer buyer0
+      """),
       value = Seq(("James Bond", true), ("叉烧包", true), ("Li Haoyi", false)),
       docs = """
         ScalaSql's `.nonEmpty` and `.isEmpty` translates to SQL's `EXISTS` and `NOT EXISTS` syntax
@@ -522,7 +534,7 @@ trait SelectTests extends ScalaSqlSuite {
         Buyer.select
           .map(b => (b.name, ShippingInfo.select.filter(_.buyerId `=` b.id).map(_.id).isEmpty))
       },
-      sql = """
+      sqls = Seq("""
         SELECT
           buyer0.name AS res_0,
           (NOT EXISTS (SELECT
@@ -531,6 +543,15 @@ trait SelectTests extends ScalaSqlSuite {
             WHERE (shipping_info1.buyer_id = buyer0.id))) AS res_1
         FROM buyer buyer0
       """,
+        """
+        SELECT
+          buyer0.name AS res_0,
+          IIF(NOT EXISTS (SELECT
+            shipping_info1.id AS res
+            FROM shipping_info shipping_info1
+            WHERE (shipping_info1.buyer_id = buyer0.id)), 1, 0) AS res_1
+        FROM buyer buyer0
+      """),
       value = Seq(("James Bond", false), ("叉烧包", false), ("Li Haoyi", true))
     )
 
